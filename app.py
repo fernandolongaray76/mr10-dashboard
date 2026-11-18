@@ -28,7 +28,7 @@ df_stores = pd.DataFrame(data_stores)
 def load_seller_data_from_gsheets():
     try:
         # Substitua abaixo pelo link gerado na opção "Publicar na Web" (formato .csv) do seu Google Sheets
-        sheet_csv_url = "https://docs.google.com/spreadsheets/d/1nQObLsq9WLZQn8YaKYK0nGeMRXbiwUFt/edit?usp=sharing&ouid=108993662246863932941&rtpof=true&sd=true"
+        sheet_csv_url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQLixDs-AZos2eDJLeCdxIGkSmhzNqbSYINKUrhy0EZcDYgLH1q5SpFihHKvzpbMw/pub?output=csv"
         df_sellers = pd.read_csv(sheet_csv_url)
         return df_sellers
     except Exception as e:
