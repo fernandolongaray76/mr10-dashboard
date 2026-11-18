@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 
-# Configuração da Página
 st.set_page_config(
     page_title="Dashboard Gerencial MR10 | Dicere Telecom",
     page_icon="📊",
@@ -25,36 +24,14 @@ data_stores = [
 ]
 df_stores = pd.DataFrame(data_stores)
 
-# Dados de Vendedores (Processados dos relatórios vp1711 e vr_1711)
+# Carregar Dados de Vendedores
 @st.cache_data
 def load_seller_data():
     try:
-        vp = pd.read_excel('vp1711.xlsx', sheet_name='Planilha')
-        vr = pd.read_excel('vr_1711.xlsx', sheet_name='Planilha')
-        vp['Data'] = pd.to_datetime(vp['Data'])
-        vr['Data'] = pd.to_datetime(vr['Data'])
-
-        s_vp = vp.groupby(['Local', 'Vendedor']).agg(
-            Total_Itens=('Descrição', 'count'),
-            Faturamento=('Sub-Total', 'sum'),
-            Ultima_Venda_Prod=('Data', 'max')
-        ).reset_index().rename(columns={'Local': 'Loja'})
-
-        s_vr = vr.groupby(['Loja (Venda)', 'Vendedor']).agg(
-            Total_Ativacoes=('Plano/Serviço', 'count'),
-            Ultima_Venda_Ativ=('Data', 'max')
-        ).reset_index().rename(columns={'Loja (Venda)': 'Loja'})
-
-        df_sellers = pd.merge(s_vp, s_vr, on=['Loja', 'Vendedor'], how='outer').fillna({
-            'Total_Itens': 0, 'Faturamento': 0, 'Total_Ativacoes': 0
-        })
-        df_sellers['Ultima_Venda'] = np.maximum(
-            df_sellers['Ultima_Venda_Prod'].fillna(pd.NaT),
-            df_sellers['Ultima_Venda_Ativ'].fillna(pd.NaT)
-        )
+        df_sellers = pd.read_excel('MR10_Performance_Vendedores_Ultima_Venda.xlsx', sheet_name='Performance')
         return df_sellers
     except Exception as e:
-        return pd.DataFrame(columns=['Loja', 'Vendedor', 'Total_Itens', 'Faturamento', 'Total_Ativacoes', 'Ultima_Venda'])
+        return pd.DataFrame(columns=['Loja', 'Vendedor', 'Qtd_Itens', 'Faturamento', 'Qtd_Ativacoes', 'Ultima_Venda'])
 
 df_sellers = load_seller_data()
 
@@ -98,18 +75,19 @@ with tab3:
     st.header("👥 Desempenho Individual & Data da Última Venda")
     st.markdown("Acompanhamento da atividade dos colaboradores por loja, volume de vendas, ativações e a data da última venda registrada.")
     
-    if not df_sellers.empty:
-        filter_loja = st.selectbox("Filtrar por Loja (Vendedores):", ["Todas"] + df_stores["Loja"].tolist())
+    if not df_sellers.empty and 'Loja' in df_sellers.columns:
+        store_list = ["Todas"] + df_sellers["Loja"].dropna().unique().tolist()
+        filter_loja = st.selectbox("Filtrar por Loja (Vendedores):", store_list)
         
         df_filtered = df_sellers if filter_loja == "Todas" else df_sellers[df_sellers["Loja"] == filter_loja]
         
         df_show = df_filtered.copy()
-        df_show['Ultima_Venda'] = pd.to_datetime(df_show['Ultima_Venda']).dt.strftime('%d/%m/%Y')
-        df_show['Faturamento'] = df_show['Faturamento'].apply(lambda x: f"R$ {x:,.2f}")
+        if 'Faturamento' in df_show.columns:
+            df_show['Faturamento'] = df_show['Faturamento'].apply(lambda x: f"R$ {x:,.2f}" if pd.notnull(x) else "R$ 0,00")
         
-        st.dataframe(df_show[['Loja', 'Vendedor', 'Total_Itens', 'Faturamento', 'Total_Ativacoes', 'Ultima_Venda']], use_container_width=True)
+        st.dataframe(df_show, use_container_width=True)
     else:
-        st.info("Nenhum dado de vendedor carregado. Certifique-se de que os arquivos de relatório estão no mesmo diretório.")
+        st.warning("⚠️ Arquivo de dados dos vendedores não encontrado.")
 
 st.markdown("---")
 st.caption("🚀 Painel Gerencial MR10 — Dicere Telecom | Desenvolvido com Python e Streamlit.")
